@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dear-comrade-deployment
+  labels:
+    app: dear-comrade
+spec:
+  selector:
+    matchLabels:
+      app: dear-comrade
+  template:
+    metadata:
+      labels:
+        app: dear-comrade
+    spec:
+      containers:
+        - name: dear-comrade
+          image: dasari508201/dear-comrade-service:0.0.0.1
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: dear-comrade-config
+                  key: spring-profiles-active
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: dear-comrade-config
+                  key: spring-datasource-url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: postgres_user
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: postgres_password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dear-comrade-service
+spec:
+  selector:
+    app: dear-comrade
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8084
+      targetPort: 8084
+      nodePort: 30008

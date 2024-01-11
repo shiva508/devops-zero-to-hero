@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dear-comrade-config
+data:
+  spring-profiles-active: docker
+  spring-datasource-url: jdbc:postgresql://postgres-service:5432/comrade

@@ -1,0 +1,122 @@
+version: "3.7"
+services:
+  zipkin:
+    container_name: zipkin
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - dear-comrade
+  dear-comrade-cloud-config:
+    container_name: dear-comrade-cloud-config
+    image: dasari508201/dear-comrade-cloud-config:0.0.1
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: wget -c http://localhost:8888/actuator/health || exit 1
+      interval: 30s
+      timeout: 30s
+      retries: 2
+    networks:
+      - dear-comrade
+  dear-comrade-discovery:
+    container_name: dear-comrade-discovery
+    image: dasari508201/dear-comrade-discovery:0.0.1
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      dear-comrade-cloud-config:
+        condition: service_healthy
+    healthcheck:
+      test: wget -c http://localhost:8761/actuator/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    links:
+      - "zipkin"
+      - "dear-comrade-cloud-config"
+    networks:
+      - dear-comrade
+  dear-comrade-cloud-gateway:
+    container_name: dear-comrade-cloud-gateway
+    image: dasari508201/dear-comrade-cloud-gateway:0.0.1
+    ports:
+      - "9999:9999"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      dear-comrade-cloud-config:
+        condition: service_healthy
+      dear-comrade-discovery:
+        condition: service_healthy
+    healthcheck:
+      test: wget -c http://localhost:9999/actuator/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    links:
+      - "zipkin"
+      - "dear-comrade-cloud-config"
+      - "dear-comrade-discovery"
+    networks:
+      - dear-comrade
+  dear-comrade-tutorial:
+    container_name: dear-comrade-tutorial
+    image: dasari508201/dear-comrade-tutorial:0.0.1
+    ports:
+      - "8091:8091"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      dear-comrade-cloud-config:
+        condition: service_healthy
+      dear-comrade-discovery:
+        condition: service_healthy
+      dear-comrade-cloud-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: wget -c http://localhost:8091/actuator/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    links:
+      - "zipkin"
+      - "dear-comrade-cloud-config"
+      - "dear-comrade-discovery"
+      - "dear-comrade-cloud-gateway"
+    networks:
+      - dear-comrade
+  dear-comrade-user-profile:
+    container_name: dear-comrade-user-profile
+    image: dasari508201/dear-comrade-user-profile:0.0.1
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      dear-comrade-cloud-config:
+        condition: service_healthy
+      dear-comrade-discovery:
+        condition: service_healthy
+      dear-comrade-cloud-gateway:
+        condition: service_healthy
+      dear-comrade-tutorial:
+        condition: service_healthy
+    healthcheck:
+      test: wget -c http://localhost:8090/actuator/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    links:
+      - "zipkin"
+      - "dear-comrade-cloud-config"
+      - "dear-comrade-discovery"
+      - "dear-comrade-cloud-gateway"
+      - "dear-comrade-tutorial"
+    networks:
+      - dear-comrade
+networks:
+  dear-comrade:
+    driver: bridge

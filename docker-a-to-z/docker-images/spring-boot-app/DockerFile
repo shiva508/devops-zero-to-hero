@@ -1,0 +1,6 @@
+FROM openjdk:17-alpine
+WORKDIR /opt
+ENV PORT 8084
+EXPOSE 8084
+COPY COPY target/dear-comrade-service-0.0.1-SNAPSHOT.jar /opt/dear-comrade-service.jar
+ENTRYPOINT exec java $JAVA_OPTS -jar dear-comrade-service.jar

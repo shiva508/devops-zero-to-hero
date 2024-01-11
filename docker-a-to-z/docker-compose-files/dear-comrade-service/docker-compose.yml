@@ -1,0 +1,91 @@
+version: "3.7"
+
+volumes:
+  postgres:
+  pgadmin:
+
+services:
+  postgres:
+    container_name: comrade_postgres
+    image: "postgres:latest"
+    environment:
+      POSTGRES_DB: comrade
+      POSTGRES_PASSWORD: comrade
+      POSTGRES_USER: dear
+    volumes:
+      - postgres:/data/postgres
+    ports:
+      - "5432"
+    restart: unless-stopped
+    networks:
+      - dear-comrade
+  pgadmin:
+    container_name: comrade_pgadmin
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 5050
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+      - ./docker_pgadmin_servers.json:/pgadmin4/servers.json
+    ports:
+      - "5050:5050"
+    entrypoint:
+      - "/bin/sh"
+      - "-c"
+      - "/bin/echo 'postgres:5432:*:dear:comrade' > /tmp/pgpassfile && chmod 600 /tmp/pgpassfile && /entrypoint.sh"
+    networks:
+      - dear-comrade
+  prometheus:
+    image: prom/prometheus:v2.35.0
+    #    network_mode: host
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./data/prometheus/config:/etc/prometheus/
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yaml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+    ports:
+      - 9090:9090
+    networks:
+      - dear-comrade
+  grafana:
+    image: grafana/grafana-oss:8.5.2
+    pull_policy: always
+    #    network_mode: host
+    container_name: grafana
+    restart: unless-stopped
+    user: root
+    ports:
+      - 3000:3000 # access grafana url
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=localhost
+      - GF_LOG_MODE=console file
+      - GF_LOG_FILTERS=alerting.notifier.slack:debug alertmanager:debug ngalert:debug
+    networks:
+      - dear-comrade
+  dear-comrade-service:
+    image: dasari508201/dear-comrade-service:0.0.0.1
+    container_name: dear-comrade-service
+    ports:
+      - "8084:8084"
+    networks:
+      - dear-comrade
+    depends_on:
+      - postgres
+      - pgadmin
+      - prometheus
+      - grafana
+networks:
+  dear-comrade:
+    driver: bridge
